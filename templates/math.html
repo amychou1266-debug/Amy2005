@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>數學運算</title>
+</head>
+<body>
+    <h1>數學運算</h1>
+
+    <form method="POST">
+        x: <input type="number" name="x" required><br><br>
+        運算子(+ - * /): <input type="text" name="opt" required><br><br>
+        y: <input type="number" name="y" required><br><br>
+
+        <button type="submit">計算</button>
+    </form>
+
+    {% if result is not none %}
+        <h2>結果：{{ result }}</h2>
+    {% endif %}
+
+    <br>
+    <a href="/">回首頁</a>
+</body>
+</html>
