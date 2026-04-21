@@ -15,6 +15,8 @@ if os.path.exists("serviceAccountKey.json"):
     cred = credentials.Certificate("serviceAccountKey.json")
 else:
     firebase_config = os.getenv("FIREBASE_CONFIG")
+    if firebase_config is None:
+        raise ValueError("找不到 serviceAccountKey.json，也沒有設定 FIREBASE_CONFIG")
     cred_dict = json.loads(firebase_config)
     cred = credentials.Certificate(cred_dict)
 
@@ -22,6 +24,7 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
+
 app = Flask(__name__)
 
 # =========================
@@ -29,15 +32,17 @@ app = Flask(__name__)
 # =========================
 @app.route("/")
 def index():
-    homepage = "<h1>老師查詢系統</h1>"
+    homepage = "<h1>這是網站</h1>"
     homepage += "<a href='/mis'>MIS</a><br>"
     homepage += "<a href='/today'>顯示日期時間</a><br>"
     homepage += "<a href='/welcome?u=tcyang&dep=MIS'>傳送使用者暱稱</a><br>"
     homepage += "<a href='/account'>網頁表單傳值</a><br>"
-    homepage += "<a href='/about'>子青簡介網頁</a><br>"
+    homepage += "<a href='/about'>我的簡介網頁</a><br>"
+    homepage += "<a href='/cup'>擲筊</a><br>"
     homepage += "<a href='/read'>讀取Firestore資料</a><br>"
     homepage += "<a href='/search'>老師查詢</a><br>"
     homepage += "<a href='/spider1'>爬蟲</a><br>"
+    homepage += "<a href='/movie'>查詢即將上映電影</a><br>"
     return homepage
 
 # =========================
@@ -94,12 +99,12 @@ def math():
     else:
         return render_template("math.html", result=None)
 
-@app.route('/cup', methods=["GET"])
+@app.route("/cup", methods=["GET"])
 def cup():
     action = request.values.get("action")
     result = None
 
-    if action == 'toss':
+    if action == "toss":
         x1 = random.randint(0, 1)
         x2 = random.randint(0, 1)
 
@@ -116,7 +121,7 @@ def cup():
             "message": msg
         }
 
-    return render_template('cup.html', result=result)
+    return render_template("cup.html", result=result)
 
 # =========================
 # Firestore
@@ -130,7 +135,7 @@ def read():
         data = doc.to_dict()
         result += f"姓名：{data.get('name','')}，研究室：{data.get('lab','')}<br>"
 
-    return result
+    return result + "<br><a href='/'>回首頁</a>"
 
 @app.route("/search")
 def search():
@@ -152,7 +157,7 @@ def search():
     <h2>老師查詢</h2>
     <form>
     <input name="keyword">
-    <input type="submit">
+    <input type="submit" value="查詢">
     </form>
     {result_html}
     <br><a href="/">回首頁</a>
@@ -178,6 +183,29 @@ def spider1():
         result += f"{text} - {href}<br>"
 
     return result + "<br><a href='/'>回首頁</a>"
+
+# =========================
+# 即將上映電影（照你原本寫法）
+# =========================
+@app.route("/movie")
+def movie():
+    url = "http://www.atmovies.com.tw/movie/next/"
+    data = requests.get(url)
+    data.encoding = "utf-8"
+
+    sp = BeautifulSoup(data.text, "html.parser")
+    result = sp.select(".filmListAllX li")
+
+    html = "<h1>即將上映電影</h1>"
+    html += "<a href='/'>回首頁</a><br><br>"
+
+    for item in result:
+        name = item.find("img").get("alt")
+        link = "http://www.atmovies.com.tw" + item.find("a").get("href")
+
+        html += f"<a href='{link}' target='_blank'>{name}</a><br>"
+
+    return html
 
 # =========================
 # 主程式
