@@ -5,6 +5,8 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
+import requests
+from bs4 import BeautifulSoup
 
 # =========================
 # Firebase 初始化
@@ -27,21 +29,22 @@ app = Flask(__name__)
 # =========================
 @app.route("/")
 def index():
-    homepage = "<h1>關於我</h1>"
+    homepage = "<h1>老師查詢系統</h1>"
     homepage += "<a href='/mis'>MIS</a><br>"
     homepage += "<a href='/today'>顯示日期時間</a><br>"
     homepage += "<a href='/welcome?u=tcyang&dep=MIS'>傳送使用者暱稱</a><br>"
     homepage += "<a href='/account'>網頁表單傳值</a><br>"
-    homepage += "<a href='/about'>簡介網頁</a><br>"
+    homepage += "<a href='/about'>子青簡介網頁</a><br>"
     homepage += "<a href='/read'>讀取Firestore資料</a><br>"
     homepage += "<a href='/search'>老師查詢</a><br>"
+    homepage += "<a href='/spider1'>爬蟲</a><br>"
     return homepage
 
 # =========================
 # 基本功能
 # =========================
 @app.route("/mis")
-def course():
+def mis():
     return "<h1>資訊管理導論</h1><a href='/'>回首頁</a>"
 
 @app.route("/today")
@@ -65,8 +68,7 @@ def account():
     if request.method == "POST":
         user = request.form["user"]
         pwd = request.form["pwd"]
-        result = "您輸入的帳號是 " + user + "；密碼為：" + pwd
-        return result
+        return f"您輸入的帳號是 {user}；密碼為：{pwd}"
     else:
         return render_template("account.html")
 
@@ -84,10 +86,7 @@ def math():
         elif opt == "*":
             result = x * y
         elif opt == "/":
-            if y == 0:
-                result = "不能除以0"
-            else:
-                result = x / y
+            result = "不能除以0" if y == 0 else x / y
         else:
             result = "運算子錯誤"
 
@@ -105,11 +104,11 @@ def cup():
         x2 = random.randint(0, 1)
 
         if x1 != x2:
-            msg = "聖筊：表示神明允許、同意，或行事會順利。"
+            msg = "聖筊：表示神明允許、同意"
         elif x1 == 0:
-            msg = "笑筊：表示神明一笑、不解，或者考慮中，行事狀況不明。"
+            msg = "笑筊：表示神明考慮中"
         else:
-            msg = "陰筊：表示神明否定、憤怒，或者不宜行事。"
+            msg = "陰筊：表示不宜"
 
         result = {
             "cup1": "/static/" + str(x1) + ".jpg",
@@ -120,7 +119,7 @@ def cup():
     return render_template('cup.html', result=result)
 
 # =========================
-# 讀取 Firestore 全部資料
+# Firestore
 # =========================
 @app.route("/read")
 def read():
@@ -129,45 +128,56 @@ def read():
 
     for doc in docs:
         data = doc.to_dict()
-        result += f"姓名：{data.get('name', '')}，研究室：{data.get('lab', '')}<br>"
+        result += f"姓名：{data.get('name','')}，研究室：{data.get('lab','')}<br>"
 
     return result
-@app.route("/search", methods=["GET"])
+
+@app.route("/search")
 def search():
     keyword = request.args.get("keyword", "").strip()
     result_html = ""
 
     if keyword:
         docs = db.collection("靜宜資管").get()
-        matched = []
 
         for doc in docs:
             data = doc.to_dict()
-            teacher_name = str(data.get("name", ""))
-            office = str(data.get("lab", ""))
+            if keyword in str(data.get("name", "")):
+                result_html += f"{data.get('name')} - {data.get('lab')}<br>"
 
-            if keyword in teacher_name:
-                matched.append((teacher_name, office))
-
-        if matched:
-            result_html += "<h3>查詢結果：</h3><ul>"
-            for name, office in matched:
-                result_html += f"<li>{name} - 研究室：{office}</li>"
-            result_html += "</ul>"
-        else:
-            result_html = "<p>查無符合資料</p>"
+        if result_html == "":
+            result_html = "查無符合資料"
 
     return f"""
-    <h2>老師查詢系統</h2>
-    <form method="get" action="/search">
-        <input type="text" name="keyword" placeholder="請輸入老師名字關鍵字" value="{keyword}">
-        <input type="submit" value="查詢">
+    <h2>老師查詢</h2>
+    <form>
+    <input name="keyword">
+    <input type="submit">
     </form>
-    <br>
     {result_html}
-    <br>
-    <a href="/">回首頁</a>
+    <br><a href="/">回首頁</a>
     """
+
+# =========================
+# 爬蟲
+# =========================
+@app.route("/spider1")
+def spider1():
+    url = "https://amy2005.vercel.app/about"
+    data = requests.get(url)
+    data.encoding = "utf-8"
+
+    sp = BeautifulSoup(data.text, "html.parser")
+    items = sp.select("td a")
+
+    result = "<h2>爬蟲結果</h2>"
+
+    for item in items:
+        text = item.text.strip()
+        href = item.get("href")
+        result += f"{text} - {href}<br>"
+
+    return result + "<br><a href='/'>回首頁</a>"
 
 # =========================
 # 主程式
