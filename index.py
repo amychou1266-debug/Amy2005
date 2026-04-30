@@ -46,6 +46,7 @@ def index():
     homepage += "<a href='/spider1'>爬蟲</a><br>"
     homepage += "<a href='/movie'>查詢即將上映電影</a><br>"
     homepage += "<br><a href=/movie2>讀取開眼電影即將上映影片，寫入Firestore</a><br>"
+    homepage += '<br><a href="/movie3">movie3：查詢電影資料</a>'
     return homepage
 
 # =========================
@@ -244,9 +245,52 @@ def movie2():
     doc_ref.set(doc)    
   return "近期上映電影已爬蟲及存檔完畢，網站最近更新日期為：" + lastUpdate 
 
+@app.route("/movie3")
+def movie3():
+    keyword = request.args.get("keyword", "")
+    result = ""
+
+    if keyword:
+        docs = db.collection("電影").stream()
+
+        for doc in docs:
+            data = doc.to_dict()
+            title = data.get("title", "")
+            picture = data.get("picture", "")
+            hyperlink = data.get("hyperlink", "")
+            showDate = data.get("showDate", "")
+            lastUpdate = data.get("lastUpdate", "")
+
+            if keyword in title:
+                result += f"""
+                <a href="{hyperlink}" target="_blank">{title}</a><br>
+                <img src="{picture}" width="150"><br>
+                {showDate} 上映<br>
+                {lastUpdate} 更新<br>
+                <hr>
+                """
+
+        if result == "":
+            result = "查無資料"
+
+    return f"""
+    <h2>即將上映查詢</h2>
+
+    <form>
+        請輸入電影片名關鍵字：
+        <input type="text" name="keyword" value="{keyword}">
+        <input type="submit" value="查詢">
+    </form>
+
+    <hr>
+
+    <h3>查詢結果（關鍵字：{keyword}）：</h3>
+    {result}
+    """
 
 # =========================
 # 主程式
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
+
