@@ -8,6 +8,8 @@ from firebase_admin import credentials, firestore
 import requests
 from bs4 import BeautifulSoup
 
+app = Flask(__name__)
+
 # =========================
 # Firebase 初始化
 # =========================
@@ -25,7 +27,6 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-app = Flask(__name__)
 
 # =========================
 # 首頁
@@ -43,9 +44,10 @@ def index():
     homepage += "<a href='/search'>老師查詢</a><br>"
     homepage += "<a href='/spider1'>爬蟲</a><br>"
     homepage += "<a href='/movie'>查詢即將上映電影</a><br>"
-    homepage += "<br><a href=/movie2>讀取開眼電影即將上映影片，寫入Firestore</a><br>"
-    homepage += '<br><a href="/movie3">movie3：查詢電影資料</a>'
+    homepage += "<br><a href='/movie2'>movie2：讀取開眼電影並寫入Firestore</a><br>"
+    homepage += "<a href='/movie3'>movie3：查詢電影資料</a><br>"
     return homepage
+
 
 # =========================
 # 基本功能
@@ -54,21 +56,25 @@ def index():
 def mis():
     return "<h1>資訊管理導論</h1><a href='/'>回首頁</a>"
 
+
 @app.route("/today")
 def today():
     now = datetime.now()
     now_str = f"{now.year}年{now.month}月{now.day}日"
     return render_template("today.html", datetime=now_str)
 
+
 @app.route("/about")
 def about():
     return render_template("about.html")
+
 
 @app.route("/welcome", methods=["GET"])
 def welcome():
     x = request.values.get("u")
     y = request.values.get("dep")
     return render_template("welcome.html", name=x, dep=y)
+
 
 @app.route("/account", methods=["GET", "POST"])
 def account():
@@ -78,6 +84,7 @@ def account():
         return f"您輸入的帳號是 {user}；密碼為：{pwd}"
     else:
         return render_template("account.html")
+
 
 @app.route("/math", methods=["GET", "POST"])
 def math():
@@ -100,6 +107,7 @@ def math():
         return render_template("math.html", result=result)
     else:
         return render_template("math.html", result=None)
+
 
 @app.route("/cup", methods=["GET"])
 def cup():
@@ -125,6 +133,7 @@ def cup():
 
     return render_template("cup.html", result=result)
 
+
 # =========================
 # Firestore
 # =========================
@@ -138,6 +147,7 @@ def read():
         result += f"姓名：{data.get('name','')}，研究室：{data.get('lab','')}<br>"
 
     return result + "<br><a href='/'>回首頁</a>"
+
 
 @app.route("/search")
 def search():
@@ -158,12 +168,13 @@ def search():
     return f"""
     <h2>老師查詢</h2>
     <form>
-    <input name="keyword">
-    <input type="submit" value="查詢">
+        <input name="keyword">
+        <input type="submit" value="查詢">
     </form>
     {result_html}
     <br><a href="/">回首頁</a>
     """
+
 
 # =========================
 # 爬蟲
@@ -186,8 +197,9 @@ def spider1():
 
     return result + "<br><a href='/'>回首頁</a>"
 
+
 # =========================
-# 即將上映電影（照你原本寫法）
+# 即將上映電影
 # =========================
 @app.route("/movie")
 def movie():
@@ -204,48 +216,66 @@ def movie():
     for item in result:
         name = item.find("img").get("alt")
         link = "http://www.atmovies.com.tw" + item.find("a").get("href")
-
         html += f"<a href='{link}' target='_blank'>{name}</a><br>"
 
     return html
 
+
 @app.route("/movie2")
 def movie2():
-  url = "http://www.atmovies.com.tw/movie/next/"
-  Data = requests.get(url)
-  Data.encoding = "utf-8"
-  sp = BeautifulSoup(Data.text, "html.parser")
-  result=sp.select(".filmListAllX li")
-  lastUpdate = sp.find("div", class_="smaller09").text[5:]
+    url = "http://www.atmovies.com.tw/movie/next/"
+    data = requests.get(url)
+    data.encoding = "utf-8"
 
-  for item in result:
-    picture = item.find("img").get("src").replace(" ", "")
-    title = item.find("div", class_="filmtitle").text
-    movie_id = item.find("div", class_="filmtitle").find("a").get("href").replace("/", "").replace("movie", "")
-    hyperlink = "http://www.atmovies.com.tw" + item.find("div", class_="filmtitle").find("a").get("href")
-    show = item.find("div", class_="runtime").text.replace("上映日期：", "")
-    show = show.replace("片長：", "")
-    show = show.replace("分", "")
-    showDate = show[0:10]
-    showLength = show[13:]
+    sp = BeautifulSoup(data.text, "html.parser")
+    result = sp.select(".filmListAllX li")
+    last_update_tag = sp.find("div", class_="smaller09")
 
-    doc = {
-        "title": title,
-        "picture": picture,
-        "hyperlink": hyperlink,
-        "showDate": showDate,
-        "showLength": showLength,
-        "lastUpdate": lastUpdate
-      }
+    if last_update_tag:
+        lastUpdate = last_update_tag.text[5:]
+    else:
+        lastUpdate = "無更新日期"
 
-    db = firestore.client()
-    doc_ref = db.collection("電影").document(movie_id)
-    doc_ref.set(doc)    
-  return "近期上映電影已爬蟲及存檔完畢，網站最近更新日期為：" + lastUpdate 
+    for item in result:
+        img_tag = item.find("img")
+        title_tag = item.find("div", class_="filmtitle")
+        runtime_tag = item.find("div", class_="runtime")
+
+        if not img_tag or not title_tag or not runtime_tag:
+            continue
+
+        a_tag = title_tag.find("a")
+        if not a_tag:
+            continue
+
+        picture = img_tag.get("src", "").replace(" ", "")
+        title = title_tag.text.strip()
+        movie_id = a_tag.get("href").replace("/", "").replace("movie", "")
+        hyperlink = "http://www.atmovies.com.tw" + a_tag.get("href")
+
+        show = runtime_tag.text.replace("上映日期：", "")
+        show = show.replace("片長：", "")
+        show = show.replace("分", "")
+        showDate = show[0:10]
+        showLength = show[13:]
+
+        doc = {
+            "title": title,
+            "picture": picture,
+            "hyperlink": hyperlink,
+            "showDate": showDate,
+            "showLength": showLength,
+            "lastUpdate": lastUpdate
+        }
+
+        db.collection("電影").document(movie_id).set(doc)
+
+    return "近期上映電影已爬蟲及存檔完畢，網站最近更新日期為：" + lastUpdate
+
 
 @app.route("/movie3")
 def movie3():
-    keyword = request.args.get("keyword", "")
+    keyword = request.args.get("keyword", "").strip()
     result = ""
 
     if keyword:
@@ -284,7 +314,10 @@ def movie3():
 
     <h3>查詢結果（關鍵字：{keyword}）：</h3>
     {result}
+
+    <br><a href="/">回首頁</a>
     """
+
 
 # =========================
 # 主程式
