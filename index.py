@@ -46,6 +46,8 @@ def index():
     homepage += "<a href='/movie'>查詢即將上映電影</a><br>"
     homepage += "<br><a href='/movie2'>movie2：讀取開眼電影並寫入Firestore</a><br>"
     homepage += "<a href='/movie3'>movie3：查詢電影資料</a><br>"
+    homepage += "<a href='/road'>台中市十大肇事路口</a><br>"
+    homepage += "<a href='/weather'>天氣查詢</a><br>"
     return homepage
 
 
@@ -317,11 +319,80 @@ def movie3():
 
     <br><a href="/">回首頁</a>
     """
+@app.route("/road")
+def road():
+    import json
 
+    with open("臺中市113年10月份十大高肇事路口.JSON", "r", encoding="utf-8") as f:
+        JsonData = json.load(f)
 
+    result = "<h1>台中市十大肇事路口</h1>"
+
+    for item in JsonData:
+        result += f"""
+        路口名稱：{item['路口名稱']}<br>
+        總件數：{item['總件數']}<br>
+        主要肇因：{item['主要肇因']}<br><br>
+        """
+
+    return result
+    return result
+@app.route("/weather", methods=["GET", "POST"])
+def weather():
+    if request.method == "GET":
+        return """
+        <h1>天氣查詢</h1>
+        <form method="post">
+            請輸入縣市：
+            <input name="city">
+            <button type="submit">查詢</button>
+        </form>
+        """
+
+    city = request.form["city"]
+
+    # ⭐ 修正台 / 臺
+    city = city.replace("台", "臺")
+
+    # ⭐ 自動補「市」
+    if not city.endswith("市"):
+        city += "市"
+
+    url = "https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001"
+    params = {
+        "Authorization": "rdec-key-123-45678-011121314",
+        "format": "JSON",
+        "locationName": city
+    }
+
+    Data = requests.get(url, params=params)
+    JsonData = Data.json()
+
+    locations = JsonData["records"]["location"]
+
+    if len(locations) == 0:
+        return f"""
+        <h1>查無資料</h1>
+        <p>你輸入的是：{city}</p>
+        <p>請輸入完整縣市名稱，例如：臺中市、臺北市、高雄市</p>
+        <a href="/weather">重新查詢</a>
+        """
+
+    location = locations[0]
+
+    weather_now = location["weatherElement"][0]["time"][0]["parameter"]["parameterName"]
+    rain = location["weatherElement"][1]["time"][0]["parameter"]["parameterName"]
+
+    return f"""
+    <h1>{city}天氣查詢結果</h1>
+    目前天氣：{weather_now}<br>
+    降雨機率：{rain}%<br><br>
+    <a href="/weather">重新查詢</a>
+    """
 # =========================
 # 主程式
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
+
 
