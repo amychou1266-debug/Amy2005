@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, make_response, jsonify
 from datetime import datetime
 import random
 import os
@@ -7,6 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import requests
 from bs4 import BeautifulSoup
+make_response, jsonify
 
 app = Flask(__name__)
 
@@ -222,7 +223,6 @@ def movie():
 
     return html
 
-
 @app.route("/movie2")
 def movie2():
     url = "http://www.atmovies.com.tw/movie/next/"
@@ -231,6 +231,7 @@ def movie2():
 
     sp = BeautifulSoup(data.text, "html.parser")
     result = sp.select(".filmListAllX li")
+
     last_update_tag = sp.find("div", class_="smaller09")
 
     if last_update_tag:
@@ -239,25 +240,43 @@ def movie2():
         lastUpdate = "無更新日期"
 
     for item in result:
+
         img_tag = item.find("img")
         title_tag = item.find("div", class_="filmtitle")
         runtime_tag = item.find("div", class_="runtime")
+
+        # =========================
+        # 電影分級
+        # =========================
+        level_img = item.select_one(".runtime img")
+
+        if level_img:
+            level = level_img.get("alt", "").strip()
+        else:
+            level = "未知"
 
         if not img_tag or not title_tag or not runtime_tag:
             continue
 
         a_tag = title_tag.find("a")
+
         if not a_tag:
             continue
 
         picture = img_tag.get("src", "").replace(" ", "")
+
         title = title_tag.text.strip()
-        movie_id = a_tag.get("href").replace("/", "").replace("movie", "")
+
+        movie_id = a_tag.get("href")
+        movie_id = movie_id.replace("/", "")
+        movie_id = movie_id.replace("movie", "")
+
         hyperlink = "http://www.atmovies.com.tw" + a_tag.get("href")
 
         show = runtime_tag.text.replace("上映日期：", "")
         show = show.replace("片長：", "")
         show = show.replace("分", "")
+
         showDate = show[0:10]
         showLength = show[13:]
 
@@ -267,57 +286,86 @@ def movie2():
             "hyperlink": hyperlink,
             "showDate": showDate,
             "showLength": showLength,
+            "level": level,
             "lastUpdate": lastUpdate
         }
 
         db.collection("電影").document(movie_id).set(doc)
 
-    return "近期上映電影已爬蟲及存檔完畢，網站最近更新日期為：" + lastUpdate
+    return f"""
+    <h1>電影資料更新完成</h1>
+    更新日期：{lastUpdate}<br>
+    <a href='/movie3'>前往電影查詢</a>
+    """
 
 
 @app.route("/movie3")
 def movie3():
+
     keyword = request.args.get("keyword", "").strip()
+
     result = ""
 
     if keyword:
+
         docs = db.collection("電影").stream()
 
         for doc in docs:
+
             data = doc.to_dict()
+
             title = data.get("title", "")
             picture = data.get("picture", "")
             hyperlink = data.get("hyperlink", "")
             showDate = data.get("showDate", "")
+            showLength = data.get("showLength", "")
+            level = data.get("level", "")
             lastUpdate = data.get("lastUpdate", "")
 
             if keyword in title:
+
                 result += f"""
-                <a href="{hyperlink}" target="_blank">{title}</a><br>
-                <img src="{picture}" width="150"><br>
-                {showDate} 上映<br>
-                {lastUpdate} 更新<br>
+                <div style='margin-bottom:30px;'>
+
+                    <a href="{hyperlink}" target="_blank">
+                        <h2>{title}</h2>
+                    </a>
+
+                    <img src="{picture}" width="200"><br><br>
+
+                    電影分級：{level}<br>
+                    上映日期：{showDate}<br>
+                    電影片長：{showLength} 分鐘<br>
+                    更新日期：{lastUpdate}<br>
+
+                </div>
+
                 <hr>
                 """
 
         if result == "":
-            result = "查無資料"
+            result = "<h3>查無資料</h3>"
 
     return f"""
-    <h2>即將上映查詢</h2>
+    <h1>即將上映電影查詢</h1>
 
     <form>
-        請輸入電影片名關鍵字：
+
+        請輸入電影名稱：
+
         <input type="text" name="keyword" value="{keyword}">
+
         <input type="submit" value="查詢">
+
     </form>
 
     <hr>
 
-    <h3>查詢結果（關鍵字：{keyword}）：</h3>
     {result}
 
-    <br><a href="/">回首頁</a>
+    <br>
+
+    <a href="/">回首頁</a>
     """
 @app.route("/road")
 def road():
@@ -388,11 +436,20 @@ def weather():
     目前天氣：{weather_now}<br>
     降雨機率：{rain}%<br><br>
     <a href="/weather">重新查詢</a>
-    """
+    """=
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    # build a request object
+    req = request.get_json(force=True)
+    # fetch queryResult from json
+    action =  req.get("queryResult").get("action")
+    msg =  req.get("queryResult").get("queryText")
+    info = "動作：" + action + "； 查詢內容：" + msg
+    return make_response(jsonify({"fulfillmentText": info}))
+
 # =========================
 # 主程式
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
-
 
