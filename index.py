@@ -477,7 +477,13 @@ def webhook3():
         if result == "":
             result = "查無符合電影"
 
-        text = f"{name}您好\n本週上映的{level}電影：\n{result}"
+        text = f"""
+       我是{name}
+       分級為：{level}
+      電影有：
+
+     {result}
+      """
 
         return make_response(jsonify({
             "fulfillmentText": text
