@@ -449,21 +449,28 @@ def webhook():
 
 @app.route("/webhook3", methods=["POST"])
 def webhook3():
+
     req = request.get_json(force=True)
+
     intent = req["queryResult"]["intent"]["displayName"]
+
     if intent == "Movie":
+
         name = req["queryResult"]["parameters"].get("name", "")
         level = req["queryResult"]["parameters"].get("rating", "")
+
         if "G" in level:
-       level = "普遍級"
-       elif "PG12" in level:
-       level = "輔12級"
-       elif "PG15" in level:
-       level = "輔15級"
-       elif "PG" in level:
-       level = "保護級"
-       elif "R" in level:
-       level = "限制級"
+            level = "普遍級"
+        elif "PG12" in level:
+            level = "輔12級"
+        elif "PG15" in level:
+            level = "輔15級"
+        elif "PG" in level:
+            level = "保護級"
+        elif "R" in level:
+            level = "限制級"
+
+        docs = db.collection("電影").get()
 
         result = ""
 
@@ -477,12 +484,12 @@ def webhook3():
             result = "查無符合電影"
 
         text = f"""
-       我是{name}
-       分級為：{level}
-      電影有：
+我是{name}
+分級為：{level}
+電影有：
 
-     {result}
-      """
+{result}
+"""
 
         return make_response(jsonify({
             "fulfillmentText": text
@@ -492,10 +499,8 @@ def webhook3():
         "fulfillmentText": "找不到對應的 intent"
     }))
 
-
 # =========================
 # 主程式
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
-
