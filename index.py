@@ -454,18 +454,16 @@ def webhook3():
     if intent == "Movie":
         name = req["queryResult"]["parameters"].get("name", "")
         level = req["queryResult"]["parameters"].get("rating", "")
-
-        if level == "G":
-            level = "普遍級"
-        elif level == "PG":
-            level = "保護級"
-        elif level == "PG12":
-            level = "輔12級"
-        elif level == "PG15":
-            level = "輔15級"
-        elif level == "R":
-            level = "限制級"
-
+        if "G" in level:
+        level = "普遍級"
+        elif "PG12" in level:
+        level = "輔12級"
+        elif "PG15" in level:
+        level = "輔15級"
+        elif "PG" in level:
+        level = "保護級"
+        elif "R" in level:
+        level = "限制級"
         docs = db.collection("電影").get()
 
         result = ""
