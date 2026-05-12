@@ -450,11 +450,8 @@ def webhook():
 @app.route("/webhook3", methods=["POST"])
 def webhook3():
     req = request.get_json(force=True)
-
     intent = req["queryResult"]["intent"]["displayName"]
-
-    if intent == "電影分級查詢":
-
+    if intent == "Movie":
         name = req["queryResult"]["parameters"].get("name", "")
         level = req["queryResult"]["parameters"].get("rating", "")
 
