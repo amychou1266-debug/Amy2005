@@ -436,7 +436,7 @@ def weather():
     目前天氣：{weather_now}<br>
     降雨機率：{rain}%<br><br>
     <a href="/weather">重新查詢</a>
-    """=
+    """
 @app.route("/webhook", methods=["POST"])
 def webhook():
     # build a request object
