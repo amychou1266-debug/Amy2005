@@ -8,8 +8,8 @@ from firebase_admin import credentials, firestore
 import requests
 from bs4 import BeautifulSoup
 
-
 app = Flask(__name__)
+
 
 # =========================
 # Firebase 初始化
