@@ -447,31 +447,17 @@ def webhook():
     info = "動作：" + action + "； 查詢內容：" + msg
     return make_response(jsonify({"fulfillmentText": info}))
 
-@app.route("/webhook2", methods=["POST"])
-def webhook2():
-    # build a request object
-    req = request.get_json(force=True)
-    # fetch queryResult from json
-    action =  req.get("queryResult").get("action")
-    #msg =  req.get("queryResult").get("queryText")
-    #info = "動作：" + action + "； 查詢內容：" + msg
-    if (action == "rateChoice"):
-        rate =  req.get("queryResult").get("parameters").get("rate")
-        info = "您選擇的電影分級是：" + rate
-    return make_response(jsonify({"fulfillmentText": info}))
-
 @app.route("/webhook3", methods=["POST"])
 def webhook3():
-    req = request.get_json()
+    req = request.get_json(force=True)
 
     intent = req["queryResult"]["intent"]["displayName"]
 
     if intent == "電影分級查詢":
 
-        name = req["queryResult"]["parameters"]["name"]
-        level = req["queryResult"]["parameters"]["rating"]
+        name = req["queryResult"]["parameters"].get("name", "")
+        level = req["queryResult"]["parameters"].get("rating", "")
 
-        # 分級轉中文
         if level == "G":
             level = "普遍級"
         elif level == "PG":
@@ -483,15 +469,15 @@ def webhook3():
         elif level == "R":
             level = "限制級"
 
-        docs = db.collection("movie").get()
+        docs = db.collection("電影").get()
 
         result = ""
 
         for doc in docs:
             data = doc.to_dict()
 
-            if level in data["Level"]:
-                result += data["MovieName"] + "\n"
+            if level in data.get("level", ""):
+                result += data.get("title", "") + "\n"
 
         if result == "":
             result = "查無符合電影"
@@ -502,6 +488,9 @@ def webhook3():
             "fulfillmentText": text
         }))
 
+    return make_response(jsonify({
+        "fulfillmentText": "找不到對應的 intent"
+    }))
 
 
 # =========================
