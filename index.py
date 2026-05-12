@@ -7,7 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import requests
 from bs4 import BeautifulSoup
-make_response, jsonify
+
 
 app = Flask(__name__)
 
