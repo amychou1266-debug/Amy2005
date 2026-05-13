@@ -437,34 +437,33 @@ def weather():
     降雨機率：{rain}%<br><br>
     <a href="/weather">重新查詢</a>
     """
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    # build a request object
-    req = request.get_json(force=True)
-    # fetch queryResult from json
-    action =  req.get("queryResult").get("action")
-    msg =  req.get("queryResult").get("queryText")
-    info = "動作：" + action + "； 查詢內容：" + msg
-    return make_response(jsonify({"fulfillmentText": info}))
-@app.route("/rate")
+@app.route("/rate", methods=["POST"])
 def rate():
 
-    name = request.args.get("name")
-    targetRate = request.args.get("rate")
+    req = request.get_json(force=True)
+
+    name = req["queryResult"]["parameters"]["name"]
+    targetRate = req["queryResult"]["parameters"]["rate"]
 
     docs = db.collection("本週新片含分級").stream()
 
     movie_list = ""
 
     for doc in docs:
+
         data = doc.to_dict()
 
-        if data["rate"] == targetRate:
-            movie_list += data["title"] + "、"
+        if data.get("rate") == targetRate:
+            movie_list += data.get("title") + "、"
+
+    if movie_list == "":
+        movie_list = "目前查無符合電影"
 
     result = f"我是{name}，分級為：{targetRate}，電影有：{movie_list}"
 
-    return result
+    return make_response(jsonify({
+        "fulfillmentText": result
+    }))
 
 # =========================
 # 主程式
