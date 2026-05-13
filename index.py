@@ -446,61 +446,29 @@ def webhook():
     msg =  req.get("queryResult").get("queryText")
     info = "動作：" + action + "； 查詢內容：" + msg
     return make_response(jsonify({"fulfillmentText": info}))
+@app.route("/rate")
+def rate():
 
-@app.route("/webhook3", methods=["POST"])
-def webhook3():
+    name = request.args.get("name")
+    targetRate = request.args.get("rate")
 
-    req = request.get_json(force=True)
+    docs = db.collection("本週新片含分級").stream()
 
-    intent = req["queryResult"]["intent"]["displayName"]
+    movie_list = ""
 
-    if intent == "Movie":
+    for doc in docs:
+        data = doc.to_dict()
 
-        name = req["queryResult"]["parameters"].get("name", "")
-        level = req["queryResult"]["parameters"].get("rating", "")
+        if data["rate"] == targetRate:
+            movie_list += data["title"] + "、"
 
-        if "G" in level:
-            level = "普遍級"
-        elif "PG12" in level:
-            level = "輔12級"
-        elif "PG15" in level:
-            level = "輔15級"
-        elif "PG" in level:
-            level = "保護級"
-        elif "R" in level:
-            level = "限制級"
+    result = f"我是{name}，分級為：{targetRate}，電影有：{movie_list}"
 
-        docs = db.collection("電影").get()
-
-        result = ""
-
-        for doc in docs:
-            data = doc.to_dict()
-
-            if level in data.get("level", ""):
-                result += data.get("title", "") + "\n"
-
-        if result == "":
-            result = "查無符合電影"
-
-        text = f"""
-我是{周辰恩}
-分級為：{level}
-電影有：
-
-{result}
-"""
-
-        return make_response(jsonify({
-            "fulfillmentText": text
-        }))
-
-    return make_response(jsonify({
-        "fulfillmentText": "找不到對應的 intent"
-    }))
+    return result
 
 # =========================
 # 主程式
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
+
