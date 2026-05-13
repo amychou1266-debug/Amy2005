@@ -443,7 +443,7 @@ def rate():
     req = request.get_json(force=True)
 
     name = req["queryResult"]["parameters"]["name"]
-    targetRate = req["queryResult"]["parameters"]["rate"]
+    targetRate = req["queryResult"]["parameters"]["rating"]
 
     docs = db.collection("本週新片含分級").stream()
 
