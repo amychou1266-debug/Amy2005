@@ -437,46 +437,33 @@ def weather():
     降雨機率：{rain}%<br><br>
     <a href="/weather">重新查詢</a>
     """
-@app.route("/webhook", methods=["POST"])
-def webhook():
+user_rate = request.args.get("rate")
 
-    req = request.get_json(force=True)
+rate_map = {
+    "G級電影": "普遍級",
+    "PG級電影": "保護級",
+    "輔12級電影": "輔12級",
+    "輔15級電影": "輔15級",
+    "R級電影": "限制級"
+}
 
-    action = req["queryResult"]["action"]
+real_rate = rate_map.get(user_rate, user_rate)
 
-    if action == "rateChoice":
+movies = []
 
-        name = req["queryResult"]["parameters"]["name"]
+for item in result:
+    movie_name = item["片名"]
+    movie_rate = item["分級"]
 
-        rate = req["queryResult"]["parameters"]["rating"]
+    if real_rate in movie_rate:
+        movies.append(movie_name)
 
-        db = firestore.client()
+if movies:
+    movie_text = "、".join(movies)
+else:
+    movie_text = "目前查無符合電影"
 
-        docs = db.collection("本週新片含分級") \
-                 .where("rate", "==", rate).get()
-
-        info = f"我是{name}，分級為：{rate}，電影有："
-
-        for doc in docs:
-
-            movie = doc.to_dict()
-
-            info += movie["title"] + "、"
-
-        if len(docs) == 0:
-
-            info = f"目前沒有分級為【{rate}】的電影"
-
-    return make_response(jsonify({
-        "fulfillmentText": info
-    }))
-    rate = req["queryResult"]["parameters"]["rating"]
-
-   if rate == "G級電影":
-    rate = "普遍級"
-
-   if rate == "PG級電影":
-    rate = "保護級"
+reply = f"我是{name}，分級為：{user_rate}，電影有：{movie_text}"
 # =========================
 # 主程式
 # =========================
