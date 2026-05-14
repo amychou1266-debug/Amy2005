@@ -439,6 +439,7 @@ def weather():
     """
 @app.route("/webhook3", methods=["POST"])
 def webhook3():
+
     req = request.get_json()
 
     intent = req["queryResult"]["intent"]["displayName"]
@@ -448,36 +449,41 @@ def webhook3():
         name = req["queryResult"]["parameters"]["name"]
         level = req["queryResult"]["parameters"]["rating"]
 
-
-        if level == "G":
+        # 分級轉換
+        if "G" in level:
             level = "普遍級"
-        elif level == "PG":
-            level = "保護級"
-        elif level == "PG12":
+        elif "PG12" in level:
             level = "輔12級"
-        elif level == "PG15":
+        elif "PG15" in level:
             level = "輔15級"
-        elif level == "R":
+        elif "PG" in level:
+            level = "保護級"
+        elif "R" in level:
             level = "限制級"
 
-        docs = db.collection("movie").get()
+        # 讀取 Firestore
+        docs = db.collection("電影").get()
 
         result = ""
 
         for doc in docs:
+
             data = doc.to_dict()
 
-            if level in data["Level"]:
-                result += data["MovieName"] + "\n"
+            movie_level = data.get("level", "")
+            movie_name = data.get("title", "")
+
+            if level in movie_level:
+                result += movie_name + "\n"
 
         if result == "":
-            result = "查無符合電影"
+            result = "目前查無符合電影"
 
-        text = f"{name}您好，分級為：{level}電影，電影有：{result}"
+        text = f"我是{name}，分級為：{level}電影，電影有：\n{result}"
 
-        return make_response(jsonify({
+        return jsonify({
             "fulfillmentText": text
-        }))
+        })
 # =========================
 # 主程式
 # =========================
