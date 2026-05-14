@@ -437,33 +437,47 @@ def weather():
     降雨機率：{rain}%<br><br>
     <a href="/weather">重新查詢</a>
     """
-user_rate = request.args.get("rate")
+@app.route("/webhook3", methods=["POST"])
+def webhook3():
+    req = request.get_json()
 
-rate_map = {
-    "G級電影": "普遍級",
-    "PG級電影": "保護級",
-    "輔12級電影": "輔12級",
-    "輔15級電影": "輔15級",
-    "R級電影": "限制級"
-}
+    intent = req["queryResult"]["intent"]["displayName"]
 
-real_rate = rate_map.get(user_rate, user_rate)
+    if intent == "電影分級查詢":
 
-movies = []
+        name = req["queryResult"]["parameters"]["name"]
+        level = req["queryResult"]["parameters"]["rating"]
 
-for item in result:
-    movie_name = item["片名"]
-    movie_rate = item["分級"]
+        # 分級轉中文
+        if level == "G":
+            level = "普遍級"
+        elif level == "PG":
+            level = "保護級"
+        elif level == "PG12":
+            level = "輔12級"
+        elif level == "PG15":
+            level = "輔15級"
+        elif level == "R":
+            level = "限制級"
 
-    if real_rate in movie_rate:
-        movies.append(movie_name)
+        docs = db.collection("movie").get()
 
-if movies:
-    movie_text = "、".join(movies)
-else:
-    movie_text = "目前查無符合電影"
+        result = ""
 
-reply = f"我是{name}，分級為：{user_rate}，電影有：{movie_text}"
+        for doc in docs:
+            data = doc.to_dict()
+
+            if level in data["Level"]:
+                result += data["MovieName"] + "\n"
+
+        if result == "":
+            result = "查無符合電影"
+
+        text = f"{name}您好\n本週上映的{level}電影：\n{result}"
+
+        return make_response(jsonify({
+            "fulfillmentText": text
+        }))
 # =========================
 # 主程式
 # =========================
