@@ -443,12 +443,12 @@ def webhook3():
 
     intent = req["queryResult"]["intent"]["displayName"]
 
-    if intent == "電影分級查詢":
+    if intent == "Movie":
 
         name = req["queryResult"]["parameters"]["name"]
         level = req["queryResult"]["parameters"]["rating"]
 
-        # 分級轉中文
+
         if level == "G":
             level = "普遍級"
         elif level == "PG":
@@ -473,7 +473,7 @@ def webhook3():
         if result == "":
             result = "查無符合電影"
 
-        text = f"{name}您好\n本週上映的{level}電影：\n{result}"
+        text = f"{name}您好，分級為：{level}電影，電影有：{result}"
 
         return make_response(jsonify({
             "fulfillmentText": text
