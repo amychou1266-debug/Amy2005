@@ -442,47 +442,56 @@ def webhook3():
 
     req = request.get_json()
 
-    intent = req["queryResult"]["intent"]["displayName"]
+    try:
 
-    if intent == "Movie":
+        intent = req["queryResult"]["intent"]["displayName"]
 
-        name = req["queryResult"]["parameters"]["name"]
-        level = req["queryResult"]["parameters"]["rating"]
+        if intent == "Movie":
 
-        # 分級轉換
-        if "G" in level:
-            level = "普遍級"
-        elif "PG12" in level:
-            level = "輔12級"
-        elif "PG15" in level:
-            level = "輔15級"
-        elif "PG" in level:
-            level = "保護級"
-        elif "R" in level:
-            level = "限制級"
+            name = req["queryResult"]["parameters"]["name"]
+            rating = req["queryResult"]["parameters"]["rating"]
 
-        # 讀取 Firestore
-        docs = db.collection("電影").get()
+            # Dialogflow 分級轉中文
+            if "G" in rating:
+                level = "普遍級"
+            elif "PG12" in rating:
+                level = "輔12級"
+            elif "PG15" in rating:
+                level = "輔15級"
+            elif "PG" in rating:
+                level = "保護級"
+            elif "R" in rating:
+                level = "限制級"
+            else:
+                level = rating
 
-        result = ""
+            docs = db.collection("電影").get()
 
-        for doc in docs:
+            result = ""
 
-            data = doc.to_dict()
+            for doc in docs:
 
-            movie_level = data.get("level", "")
-            movie_name = data.get("title", "")
+                data = doc.to_dict()
 
-            if level in movie_level:
-                result += movie_name + "\n"
+                movie_level = data.get("level", "")
+                movie_name = data.get("title", "")
 
-        if result == "":
-            result = "目前查無符合電影"
+                if level in movie_level:
+                    result += movie_name + "\n"
 
-        text = f"我是{name}，分級為：{level}電影，電影有：\n{result}"
+            if result == "":
+                result = "目前查無符合電影"
+
+            text = f"我是{name}，分級為：{level}電影，電影有：\n{result}"
+
+            return jsonify({
+                "fulfillmentText": text
+            })
+
+    except Exception as e:
 
         return jsonify({
-            "fulfillmentText": text
+            "fulfillmentText": str(e)
         })
 # =========================
 # 主程式
