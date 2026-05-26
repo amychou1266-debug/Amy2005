@@ -540,9 +540,11 @@ def webhook7():
     #msg =  req.get("queryResult").get("queryText")
     #info = "動作：" + action + "； 查詢內容：" + msg
     if (action == "rateChoice"):
+…
     elif (action == "input.unknown"):
         info =  req["queryResult"]["queryText"]
     return make_response(jsonify({"fulfillmentText": info}))
+
 
 # =========================
 # 主程式
