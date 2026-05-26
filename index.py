@@ -7,6 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import requests
 from bs4 import BeautifulSoup
+from google import genai
 
 app = Flask(__name__)
 
@@ -49,6 +50,7 @@ def index():
     homepage += "<a href='/movie3'>movie3：查詢電影資料</a><br>"
     homepage += "<a href='/road'>台中市十大肇事路口</a><br>"
     homepage += "<a href='/weather'>天氣查詢</a><br>"
+    homepage += "<a href='/AI'>靜宜資管</a><br>"
     return homepage
 
 
