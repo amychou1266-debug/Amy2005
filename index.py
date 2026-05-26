@@ -52,6 +52,7 @@ def index():
     homepage += "<a href='/road'>台中市十大肇事路口</a><br>"
     homepage += "<a href='/weather'>天氣查詢</a><br>"
     homepage += "<a href='/AI'>靜宜資管</a><br>"
+    homepage += "<a href='/ask'>問問題</a><br>"
     return homepage
 
 
@@ -512,6 +513,24 @@ def AI():
     except Exception as e:
 
         return f"錯誤：{str(e)}"
+@app.route('/ask', methods=['GET', 'POST']) 
+def ask():
+    if request.method == "POST":
+        user_prompt = request.form.get('prompt', '')
+        if not user_prompt:
+            return "請輸入內容", 400
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=user_prompt,
+            )
+            return response.text
+        except Exception as e:
+            return f"發生錯誤: {str(e)}", 500
+
+    else:    
+        # 當使用者直接打開網頁 (GET) 時，顯示輸入框畫面
+        return render_template("ask.html")
 
 # =========================
 # 主程式
