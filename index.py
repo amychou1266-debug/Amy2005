@@ -533,17 +533,19 @@ def ask():
         return render_template("ask.html")
 @app.route("/webhook7", methods=["POST"])
 def webhook7():
-    # build a request object
+
     req = request.get_json(force=True)
-    # fetch queryResult from json
-    action =  req.get("queryResult").get("action")
-    #msg =  req.get("queryResult").get("queryText")
-    #info = "動作：" + action + "； 查詢內容：" + msg
-    if (action == "rateChoice"):
-…
-    elif (action == "input.unknown"):
-        info =  req["queryResult"]["queryText"]
-    return make_response(jsonify({"fulfillmentText": info}))
+
+    question = req["queryResult"]["queryText"]
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=question
+    )
+
+    return jsonify({
+        "fulfillmentText": response.text
+    })
 
 
 # =========================
