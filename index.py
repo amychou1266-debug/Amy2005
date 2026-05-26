@@ -8,7 +8,8 @@ from firebase_admin import credentials, firestore
 import requests
 from bs4 import BeautifulSoup
 from google import genai
-
+api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key)
 app = Flask(__name__)
 
 
