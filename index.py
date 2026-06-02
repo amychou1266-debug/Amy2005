@@ -533,29 +533,35 @@ def ask():
         return render_template("ask.html")
 @app.route("/webhook7", methods=["POST"])
 def webhook7():
-        instruction_text = (
-            "你是一個熱心且知識豐富的專業智慧助理。"
-            "對於使用者的提問，請回覆重點的關鍵字，不要重述問題。"         
-        )
+    req = request.get_json()
 
+    instruction_text = (
+        "你是一個熱心且知識豐富的專業智慧助理。"
+        "對於使用者的提問，請回覆重點的關鍵字，不要重述問題。"
+    )
 
-        ai_config = types.GenerateContentConfig(
-            max_output_tokens=500, 
-            system_instruction=instruction_text
-        )
-response = client.models.generate_content(
-            model='gemini-3.5-flash', 
+    ai_config = types.GenerateContentConfig(
+        max_output_tokens=500,
+        system_instruction=instruction_text
+    )
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
             contents=req["queryResult"]["queryText"],
             config=ai_config,
         )
 
-        if response.text:
-            info = response.text
-        else:
-            info = "抱歉，我現在無法生成回應，請稍後再試。"
+        info = response.text if response.text else "抱歉，我現在無法生成回應，請稍後再試。"
 
-    return make_response(jsonify({"fulfillmentText": info}))
+        return make_response(jsonify({
+            "fulfillmentText": info
+        }))
 
+    except Exception as e:
+        return make_response(jsonify({
+            "fulfillmentText": f"錯誤：{str(e)}"
+        }))
 
 
 # =========================
